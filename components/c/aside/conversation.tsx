@@ -7,6 +7,8 @@ import React from "react";
 import { Room } from "matrix-js-sdk";
 import { FaCheck, FaTrash } from "react-icons/fa"; // Ensure you have these icons
 
+import MatrixService from "@/services/MatrixService";
+
 interface CAsideConversationProps {
   room: Room;
   active: boolean;
@@ -27,6 +29,16 @@ export const CAsideConversation: React.FC<CAsideConversationProps> = ({
   const lastMessage = lastEvent?.getContent()?.body || "";
   const lastTimestamp = lastEvent?.getDate()?.toLocaleTimeString() || "";
   const membership = room.getMyMembership();
+  const members = room.getMembers();
+
+  let avatarUrl = null;
+  if (members.length == 2) {
+    if (members[0].userId != MatrixService.getClient().getUserId()) {
+      avatarUrl = members[0].getAvatarUrl(MatrixService.getClient().getHomeserverUrl(), 100, 100, "scale", false, false);
+    } else {
+      avatarUrl = members[1].getAvatarUrl(MatrixService.getClient().getHomeserverUrl(), 100, 100, "scale", false, false);
+    }
+  }
 
   return (
     <div
@@ -46,10 +58,16 @@ export const CAsideConversation: React.FC<CAsideConversationProps> = ({
         }
       }}
     >
-      <Avatar
-        className="w-14 h-14 min-w-14 min-h-14 text-small"
-        name={roomName}
-      />
+      <div>
+        {avatarUrl ? (
+          <Avatar src={avatarUrl} alt="User Avatar" className="w-14 h-14 min-w-14 min-h-14 rounded-full" />
+        ) : (
+          <Avatar
+            className="w-14 h-14 min-w-14 min-h-14 text-small"
+            name={roomName}
+          />
+        )}
+      </div>
       <div className="flex flex-col justify-between items-start w-full max-w-[17vw]">
         <div className="w-full flex flex-row items-center justify-between">
           <span
