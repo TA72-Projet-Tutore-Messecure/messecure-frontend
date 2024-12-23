@@ -3,9 +3,11 @@
 "use client";
 
 import { Avatar } from "@nextui-org/react";
-import React from "react";
-import { Room } from "matrix-js-sdk";
+import React, { useEffect, useState } from "react";
+import { Room, RoomMember } from "matrix-js-sdk";
 import { FaCheck, FaTrash } from "react-icons/fa"; // Ensure you have these icons
+
+import MatrixService from "@/services/MatrixService";
 
 interface CAsideConversationProps {
   room: Room;
@@ -27,6 +29,40 @@ export const CAsideConversation: React.FC<CAsideConversationProps> = ({
   const lastMessage = lastEvent?.getContent()?.body || "";
   const lastTimestamp = lastEvent?.getDate()?.toLocaleTimeString() || "";
   const membership = room.getMyMembership();
+  const members = room.getJoinedMembers();
+
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchAvatar = async () => {
+      if (members.length === 2) {
+        const client = MatrixService.getClient();
+        const myUserId = client.getUserId();
+        const otherMember: RoomMember =
+          members[0].userId !== myUserId ? members[0] : members[1];
+
+        const blobUrl = await MatrixService.getUserAvatarThumbnail(otherMember);
+
+        if (isMounted) {
+          setAvatarUrl(blobUrl);
+        }
+      } else {
+        setAvatarUrl(null); // For group rooms or if no avatar
+      }
+    };
+
+    fetchAvatar();
+
+    return () => {
+      isMounted = false;
+      // Revoke Blob URL to free memory
+      if (avatarUrl) {
+        URL.revokeObjectURL(avatarUrl);
+      }
+    };
+  }, [room, members]);
 
   return (
     <div
@@ -46,10 +82,20 @@ export const CAsideConversation: React.FC<CAsideConversationProps> = ({
         }
       }}
     >
-      <Avatar
-        className="w-14 h-14 min-w-14 min-h-14 text-small"
-        name={roomName}
-      />
+      <div>
+        {avatarUrl ? (
+          <Avatar
+            alt="User Avatar"
+            className="w-14 h-14 min-w-14 min-h-14 rounded-full"
+            src={avatarUrl}
+          />
+        ) : (
+          <Avatar
+            className="w-14 h-14 min-w-14 min-h-14 text-small"
+            name={roomName}
+          />
+        )}
+      </div>
       <div className="flex flex-col justify-between items-start w-full max-w-[17vw]">
         <div className="w-full flex flex-row items-center justify-between">
           <span
